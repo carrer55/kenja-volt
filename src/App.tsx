@@ -1,10 +1,10 @@
 import React from 'react';
-import ConnectionTest from './components/ConnectionTest';
+import AuthWrapper from './components/AuthWrapper';
 import './index.css';
 
 function App() {
   return (
-    <ConnectionTest />
+    <AuthWrapper />
   );
 }
 

@@ -10,7 +10,7 @@ import {
   User,
   X
 } from 'lucide-react';
-import { auth } from '../lib/auth';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 const menuItems = [
   { icon: Home, label: 'ホーム', active: true },
@@ -30,6 +30,8 @@ interface SidebarProps {
 }
 
 function Sidebar({ isOpen, onClose, onNavigate, currentView = 'dashboard' }: SidebarProps) {
+  const { signOut, profile } = useSupabaseAuth();
+
   const handleMenuClick = (view: string) => {
     if (onNavigate) {
       onNavigate(view);
@@ -40,6 +42,10 @@ function Sidebar({ isOpen, onClose, onNavigate, currentView = 'dashboard' }: Sid
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    window.location.reload();
+  };
   return (
     <div className={`
       fixed lg:relative z-50 lg:z-auto
@@ -125,35 +131,15 @@ function Sidebar({ isOpen, onClose, onNavigate, currentView = 'dashboard' }: Sid
             </div>
             <div>
               <p className="text-slate-800 text-sm font-medium" id="sidebar-user-name">
-                {(() => {
-                  const demoMode = localStorage.getItem('demoMode');
-                  if (demoMode === 'true') {
-                    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-                    return userProfile.full_name || 'デモユーザー';
-                  }
-                  // 実際のユーザーの場合はローカルストレージから取得
-                  const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-                  return userProfile.full_name || 'ユーザー';
-                })()}
+                {profile?.full_name || 'ユーザー'}
               </p>
               <p className="text-slate-600 text-xs" id="sidebar-user-position">
-                {(() => {
-                  const demoMode = localStorage.getItem('demoMode');
-                  if (demoMode === 'true') {
-                    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-                    return userProfile.position || '代表取締役';
-                  }
-                  const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-                  return userProfile.position || '一般職';
-                })()}
+                {profile?.position || '一般職'}
               </p>
             </div>
           </div>
           <button 
-            onClick={() => {
-              auth.logout();
-              window.location.reload();
-            }}
+            onClick={handleLogout}
             className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white/30 hover:bg-white/50 rounded-lg border border-white/40 transition-all duration-200 backdrop-blur-sm hover:shadow-lg"
           >
             <LogOut className="w-4 h-4 text-slate-700" />
