@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Loader2, Database } from 'lucide-react';
-import { testConnection } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 function ConnectionTest() {
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -12,6 +12,28 @@ function ConnectionTest() {
     success: null,
     message: ''
   });
+
+  const testConnection = async () => {
+    try {
+      const { data, error } = await supabase.from('user_profiles').select('count').limit(1);
+      
+      if (error && error.code === 'PGRST116') {
+        // テーブルが存在しない場合は正常（接続は成功）
+        return { success: true, message: 'Supabase接続成功' };
+      }
+      
+      if (error) {
+        return { success: false, message: `接続エラー: ${error.message}` };
+      }
+      
+      return { success: true, message: 'Supabase接続成功' };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: `接続エラー: ${error instanceof Error ? error.message : '不明なエラー'}` 
+      };
+    }
+  };
 
   useEffect(() => {
     const checkConnection = async () => {
