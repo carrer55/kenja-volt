@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import Login from './auth/Login';
 import Register from './auth/Register';
 import RegisterSuccess from './auth/RegisterSuccess';
@@ -10,7 +10,7 @@ import Dashboard from './Dashboard';
 
 function AuthWrapper() {
   const [currentView, setCurrentView] = useState<string>('login');
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, profile } = useSupabaseAuth();
 
   const handleLoginSuccess = () => {
     // ログイン成功時の処理は useAuth フックで自動的に処理される
@@ -37,8 +37,12 @@ function AuthWrapper() {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && profile) {
     return <Dashboard />;
+  }
+
+  if (isAuthenticated && !profile) {
+    return <Onboarding onNavigate={navigateToView} onComplete={handleOnboardingComplete} />;
   }
 
   switch (currentView) {

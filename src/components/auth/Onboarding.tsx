@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Building, Phone, Briefcase, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
 
 interface OnboardingProps {
   onNavigate: (view: string) => void;
@@ -16,7 +16,7 @@ function Onboarding({ onNavigate, onComplete }: OnboardingProps) {
     agreeToTerms: false
   });
   const [error, setError] = useState('');
-  const { updateProfile, loading } = useAuth();
+  const { updateProfile, loading } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +28,8 @@ function Onboarding({ onNavigate, onComplete }: OnboardingProps) {
     }
 
     const result = await updateProfile({
-      name: formData.fullName,
-      company: formData.companyName,
+      full_name: formData.fullName,
+      company_name: formData.companyName,
       position: formData.position,
       phone: formData.phone
     });

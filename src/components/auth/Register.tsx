@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, UserPlus, ArrowLeft, User, Building, Phone, Briefcase } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
 
 interface RegisterProps {
   onNavigate: (view: string) => void;
@@ -19,7 +19,7 @@ function Register({ onNavigate }: RegisterProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const { register: registerUser, loading } = useAuth();
+  const { signUp, loading } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,11 +36,9 @@ function Register({ onNavigate }: RegisterProps) {
       return;
     }
 
-    const result = await registerUser({
-      email: formData.email,
-      password: formData.password,
-      name: formData.name,
-      company: formData.company,
+    const result = await signUp(formData.email, formData.password, {
+      full_name: formData.name,
+      company_name: formData.company,
       position: formData.position,
       phone: formData.phone
     });

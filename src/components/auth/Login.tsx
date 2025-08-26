@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, LogIn, UserPlus, RotateCcw } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
 
 interface LoginProps {
   onNavigate: (view: string) => void;
@@ -12,13 +12,13 @@ function Login({ onNavigate, onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login, loading } = useAuth();
+  const { signIn, loading } = useSupabaseAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const result = await login(email, password);
+    const result = await signIn(email, password);
     
     if (result.success) {
       onLoginSuccess();

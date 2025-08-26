@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Calendar, MapPin, Upload, Calculator, Save } from 'lucide-react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import { useBusinessTrips } from '../hooks/useBusinessTrips';
+import { useTravelRegulations } from '../hooks/useTravelRegulations';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 interface BusinessTripApplicationProps {
   onNavigate: (view: 'dashboard' | 'business-trip' | 'expense') => void;
@@ -9,7 +12,12 @@ interface BusinessTripApplicationProps {
 
 function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { createApplication, loading: submitting } = useBusinessTrips();
+  const { getAllowanceForPosition } = useTravelRegulations();
+  const { profile } = useSupabaseAuth();
+  
   const [formData, setFormData] = useState({
+    title: '',
     purpose: '',
     startDate: '',
     endDate: '',
@@ -25,13 +33,16 @@ function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
 
   const [dragActive, setDragActive] = useState(false);
 
-  // 出張日当の自動計算（1日あたり5,000円と仮定）
+  // 出張日当の自動計算
   const calculateDailyAllowance = () => {
     if (formData.startDate && formData.endDate) {
       const start = new Date(formData.startDate);
       const end = new Date(formData.endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const dailyRate = 5000; // 1日あたりの日当
+      
+      // 規程から日当を取得
+      const allowance = getAllowanceForPosition(profile?.position || '一般職');
+      const dailyRate = allowance.domestic;
       const transportationRate = 2000; // 1日あたりの交通費
       const accommodationRate = 8000; // 1日あたりの宿泊費
 
@@ -54,7 +65,7 @@ function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
 
   React.useEffect(() => {
     calculateDailyAllowance();
-  }, [formData.startDate, formData.endDate]);
+  }, [formData.startDate, formData.endDate, profile]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -97,12 +108,32 @@ function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // ここで申請データを送信
-    console.log('出張申請データ:', formData);
-    alert('出張申請が送信されました！');
-    onNavigate('dashboard');
+    
+    if (!formData.title.trim()) {
+      alert('申請タイトルを入力してください');
+      return;
+    }
+
+    const result = await createApplication({
+      title: formData.title,
+      purpose: formData.purpose,
+      destination: formData.destination,
+      start_date: formData.startDate,
+      end_date: formData.endDate,
+      estimated_daily_allowance: formData.estimatedExpenses.dailyAllowance,
+      estimated_transportation: formData.estimatedExpenses.transportation,
+      estimated_accommodation: formData.estimatedExpenses.accommodation,
+      estimated_total: formData.estimatedExpenses.total
+    });
+
+    if (result.success) {
+      alert('出張申請が保存されました！');
+      onNavigate('dashboard');
+    } else {
+      alert(`エラー: ${result.error}`);
+    }
   };
 
   const onBack = () => {
@@ -151,6 +182,19 @@ function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
                   <h2 className="text-xl font-semibold text-slate-800 mb-4">基本情報</h2>
                   
                   <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        申請タイトル <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-4 py-3 bg-white/50 border border-white/40 rounded-lg text-slate-700 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-navy-400 focus:border-transparent backdrop-blur-xl"
+                        placeholder="例：東京出張申請"
+                        required
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
                         出張目的 <span className="text-red-500">*</span>
@@ -304,10 +348,11 @@ function BusinessTripApplication({ onNavigate }: BusinessTripApplicationProps) {
                   </button>
                   <button
                     type="submit"
+                    disabled={submitting}
                     className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-navy-700 to-navy-900 hover:from-navy-800 hover:to-navy-950 text-white rounded-lg font-medium shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105"
                   >
                     <Save className="w-5 h-5" />
-                    <span>申請を送信</span>
+                    <span>{submitting ? '保存中...' : '申請を保存'}</span>
                   </button>
                 </div>
               </form>

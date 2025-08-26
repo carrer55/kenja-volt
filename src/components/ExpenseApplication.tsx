@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Save, Upload, Camera, FileText } from 'lucide-react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import { useExpenses } from '../hooks/useExpenses';
 
 interface ExpenseApplicationProps {
   onNavigate: (view: 'dashboard' | 'business-trip' | 'expense') => void;
@@ -9,7 +10,7 @@ interface ExpenseApplicationProps {
 
 interface ExpenseItem {
   id: string;
-  category: string;
+  category: '交通費' | '宿泊費' | '日当' | '雑費';
   date: string;
   amount: number;
   description: string;
@@ -23,6 +24,8 @@ interface ExpenseItem {
 
 function ExpenseApplication({ onNavigate }: ExpenseApplicationProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { createApplication, loading: submitting } = useExpenses();
+  const [title, setTitle] = useState('経費申請');
   const [expenses, setExpenses] = useState<ExpenseItem[]>([
     {
       id: '1',
@@ -87,11 +90,33 @@ function ExpenseApplication({ onNavigate }: ExpenseApplicationProps) {
     setShowOCRModal(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('経費申請データ:', expenses);
-    alert('経費申請が送信されました！');
-    onNavigate('dashboard');
+    
+    // バリデーション
+    const validExpenses = expenses.filter(exp => exp.date && exp.amount > 0);
+    if (validExpenses.length === 0) {
+      alert('有効な経費項目を入力してください');
+      return;
+    }
+
+    const expenseItems = validExpenses.map(exp => ({
+      category: exp.category,
+      date: exp.date,
+      amount: exp.amount,
+      description: exp.description,
+      receipt_url: null, // ファイルアップロード機能は後で実装
+      ocr_data: exp.ocrResult || null
+    }));
+
+    const result = await createApplication(title, expenseItems);
+
+    if (result.success) {
+      alert('経費申請が保存されました！');
+      onNavigate('dashboard');
+    } else {
+      alert(`エラー: ${result.error}`);
+    }
   };
 
   const onBack = () => {
@@ -137,6 +162,24 @@ function ExpenseApplication({ onNavigate }: ExpenseApplicationProps) {
             <div className="max-w-4xl mx-auto">
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-8">経費申請</h1>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 申請タイトル */}
+                <div className="backdrop-blur-xl bg-white/20 rounded-xl p-6 border border-white/30 shadow-xl">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-4">申請情報</h2>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      申請タイトル <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/50 border border-white/40 rounded-lg text-slate-700 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-navy-400 backdrop-blur-xl"
+                      placeholder="例：7月度交通費精算"
+                      required
+                    />
+                  </div>
+                </div>
+
                 {/* 経費項目 */}
                 <div className="backdrop-blur-xl bg-white/20 rounded-xl p-6 border border-white/30 shadow-xl">
                   <div className="flex items-center justify-between mb-6">
@@ -284,10 +327,11 @@ function ExpenseApplication({ onNavigate }: ExpenseApplicationProps) {
                   </button>
                   <button
                     type="submit"
+                    disabled={submitting}
                     className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-navy-700 to-navy-900 hover:from-navy-800 hover:to-navy-950 text-white rounded-lg font-medium shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105"
                   >
                     <Save className="w-5 h-5" />
-                    <span>申請を送信</span>
+                    <span>{submitting ? '保存中...' : '申請を保存'}</span>
                   </button>
                 </div>
               </form>
